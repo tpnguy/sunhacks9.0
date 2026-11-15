@@ -11,6 +11,7 @@
 		2185AB988799DAF0192C5E00 /* RecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663DD7BAA1CE89E7CDFC5280 /* RecordView.swift */; };
 		3821B55BD855DC0E50CE5626 /* VAD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4422A168B0F16793EDF084 /* VAD.swift */; };
 		3845A18646C62A15CDF418A4 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3443DFBECB3A580E625DFC01 /* LeaderboardView.swift */; };
+		3E07057E46F1966EA510C80A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FEFDF29F24F44E5A5278F018 /* Assets.xcassets */; };
 		457447B4DAD16100DAAE1A88 /* QRShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFAA985318F30F9222B9EEB2 /* QRShareView.swift */; };
 		4EDDF42EC367FE1E842BC697 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DCD7A8934BCEFE6456D6136 /* AudioSessionManager.swift */; };
 		5491DDCA7D9FC2BC902097F9 /* Clips in Resources */ = {isa = PBXBuildFile; fileRef = 6021B1E0675314CFAA82FE96 /* Clips */; };
@@ -64,13 +65,14 @@
 		B98B77D6CEB97CB3A0D8E716 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
 		BB28B55F319FCAF854C0A990 /* ServerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfig.swift; sourceTree = "<group>"; };
 		BCD505007C1B3CF5613789F8 /* ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultView.swift; sourceTree = "<group>"; };
-		C3E3988AFA2E72CD5A45A577 /* DubStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DubStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3E3988AFA2E72CD5A45A577 /* DubStudio.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DubStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6C505484BD8BD0675FC958E /* ConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsentView.swift; sourceTree = "<group>"; };
 		CFE01236E0B5CFAB671DFBE7 /* CreditsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditsView.swift; sourceTree = "<group>"; };
 		D2CFD71DE1FD4929DEA3EF90 /* ClipGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipGridView.swift; sourceTree = "<group>"; };
 		DDEE1945C8C56E60BC3DAE96 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		EFAA985318F30F9222B9EEB2 /* QRShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRShareView.swift; sourceTree = "<group>"; };
 		F4BE709A508C3EC831727769 /* ScorecardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardView.swift; sourceTree = "<group>"; };
+		FEFDF29F24F44E5A5278F018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FFB632CA448B7FB610EA75C0 /* DubStudioTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DubStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -124,6 +126,7 @@
 			children = (
 				850472C74FE3B49C6F4F75B9 /* APIClient.swift */,
 				50C44405A3ACF18418ED4DFE /* AppState.swift */,
+				FEFDF29F24F44E5A5278F018 /* Assets.xcassets */,
 				3AD6E9F580ABBB3AE2EB417F /* AudioRecorder.swift */,
 				0DCD7A8934BCEFE6456D6136 /* AudioSessionManager.swift */,
 				6021B1E0675314CFAA82FE96 /* Clips */,
@@ -193,6 +196,7 @@
 						ProvisioningStyle = Automatic;
 					};
 					D5271A9F338E222303F42D97 = {
+						DevelopmentTeam = CBJ9GU3SGB;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -222,6 +226,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3E07057E46F1966EA510C80A /* Assets.xcassets in Resources */,
 				5491DDCA7D9FC2BC902097F9 /* Clips in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -347,7 +352,7 @@
 		14DDC24B1A808391DCD50F08 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CBJ9GU3SGB;
@@ -361,7 +366,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.dubstudio.app;
 				PRODUCT_NAME = DubStudio;
 				SDKROOT = iphoneos;
-				SERVER_BASE_URL = "https://32.189.49.12.sslip.io";
+				SERVER_BASE_URL = "https://larpstudio.vodka";
 				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Release;
@@ -369,7 +374,7 @@
 		1FC581B6121EC2EF559FEB20 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CBJ9GU3SGB;
@@ -383,7 +388,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.dubstudio.app;
 				PRODUCT_NAME = DubStudio;
 				SDKROOT = iphoneos;
-				SERVER_BASE_URL = "https://32.189.49.12.sslip.io";
+				SERVER_BASE_URL = "https://larpstudio.vodka";
 				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Debug;

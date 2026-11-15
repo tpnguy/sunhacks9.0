@@ -50,6 +50,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /d/{id}", s.sharePage)
 	mux.HandleFunc("POST /d/{id}/delete", s.deleteTake)
 	mux.HandleFunc("GET /board", s.board)
+	mux.HandleFunc("GET /favicon.ico", icon("favicon-32.png")) // browsers request this path by default
+	mux.HandleFunc("GET /favicon-32.png", icon("favicon-32.png"))
+	mux.HandleFunc("GET /apple-touch-icon.png", icon("apple-touch-icon.png"))
+	mux.HandleFunc("GET /icon-512.png", icon("icon-512.png"))
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/board", http.StatusFound)
 	})

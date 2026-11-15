@@ -16,6 +16,24 @@ import (
 //go:embed templates/*.html
 var templateFS embed.FS
 
+// Site icons (cropped from the LARPStudio speaking-head artwork).
+//
+//go:embed static/*.png
+var staticFS embed.FS
+
+// icon serves one embedded PNG with a day of browser caching.
+func icon(name string) http.HandlerFunc {
+	b, err := staticFS.ReadFile("static/" + name)
+	if err != nil {
+		panic(err) // embedded at build time; missing = programming error
+	}
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		_, _ = w.Write(b)
+	}
+}
+
 var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	"inc": func(i int) int { return i + 1 },
 }).ParseFS(templateFS, "templates/*.html"))

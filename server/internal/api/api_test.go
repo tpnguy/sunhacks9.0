@@ -143,3 +143,14 @@ func TestCleanNickname(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestFaviconServed(t *testing.T) {
+	h := (&Server{}).Handler()
+	for _, p := range []string{"/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png", "/icon-512.png"} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", p, nil))
+		if rec.Code != 200 || rec.Header().Get("Content-Type") != "image/png" || rec.Body.Len() < 1000 {
+			t.Fatalf("%s: code=%d type=%q len=%d", p, rec.Code, rec.Header().Get("Content-Type"), rec.Body.Len())
+		}
+	}
+}

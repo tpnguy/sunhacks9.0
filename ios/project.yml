@@ -31,8 +31,9 @@ targets:
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "2"
-        SERVER_BASE_URL: "https://32.189.49.12.sslip.io"
-        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        SERVER_BASE_URL: "https://larpstudio.vodka"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        DEVELOPMENT_TEAM: CBJ9GU3SGB # personal team; keeps device signing after `xcodegen`
         ENABLE_PREVIEWS: YES
     info:
       path: DubStudio/Info.plist

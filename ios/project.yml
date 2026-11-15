@@ -1,0 +1,88 @@
+name: DubStudio
+options:
+  bundleIdPrefix: com.dubstudio
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  DubStudio:
+    type: application
+    platform: iOS
+    sources:
+      - path: DubStudio
+        excludes:
+          - Clips
+          - Info.plist
+      # Folder reference: anything dropped into DubStudio/Clips (mp4s + clips.json)
+      # is copied into the app bundle under Clips/ with no project changes.
+      - path: DubStudio/Clips
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dubstudio.app
+        PRODUCT_NAME: DubStudio
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "2"
+        SERVER_BASE_URL: "https://32.189.49.12.sslip.io"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        ENABLE_PREVIEWS: YES
+    info:
+      path: DubStudio/Info.plist
+      properties:
+        CFBundleDisplayName: DubStudio
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ServerBaseURL: $(SERVER_BASE_URL)
+        NSMicrophoneUsageDescription: DubStudio records your voice while you dub a clip. Your recording is sent to Google Gemini for scoring and deleted after 7 days.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UILaunchScreen:
+          UIColorName: ""
+        UIStatusBarStyle: UIStatusBarStyleLightContent
+        UIUserInterfaceStyle: Dark
+        UIRequiresFullScreen: false
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+  DubStudioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: DubStudioTests
+    dependencies:
+      - target: DubStudio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dubstudio.app.tests
+        TARGETED_DEVICE_FAMILY: "2"
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  DubStudio:
+    build:
+      targets:
+        DubStudio: all
+        DubStudioTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - DubStudioTests
+    archive:
+      config: Release

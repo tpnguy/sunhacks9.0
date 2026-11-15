@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>DubStudio Leaderboard</title>
+<meta http-equiv="refresh" content="{{.Refresh}}">
+{{template "head"}}
+<style>
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.top h1 { font-size: clamp(48px, 8vw, 104px); }
+.tagline { color: var(--muted); font-size: 15px; margin: 6px 0 0; }
+.tagline b { color: var(--gold-soft); font-weight: 600; }
+.live { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #ff4d5e; box-shadow: 0 0 12px #ff4d5e; animation: pulse 1.6s infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.card h2 { font-family: var(--display); font-size: 30px; letter-spacing: .05em; margin: 0 0 12px; font-weight: 400; }
+ol.rank { list-style: none; margin: 0; padding: 0; }
+.row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 12px 6px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.medal { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-size: 24px; color: var(--muted); border: 1px solid var(--line); }
+.r1 .medal { background: var(--gold); color: #1a1400; border: 0; box-shadow: 0 0 22px rgba(245,197,24,.55); }
+.r2 .medal { background: var(--silver); color: #15161a; border: 0; }
+.r3 .medal { background: var(--bronze); color: #1d0f04; border: 0; }
+.r1 { background: linear-gradient(90deg, rgba(245,197,24,.10), transparent 70%); border-radius: 12px; }
+.who { min-width: 0; }
+.nick { font-size: 22px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r1 .nick { font-size: 28px; }
+.clipname { color: var(--muted); font-size: 13px; margin: 2px 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .overall { font-size: 46px; min-width: 70px; text-align: right; }
+.r1 .overall { font-size: 60px; text-shadow: 0 0 20px rgba(245,197,24,.4); }
+.clips { display: grid; gap: 16px; }
+.mini h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+.mini ol { margin: 0; padding: 0; list-style: none; }
+.mini li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.mini li:first-child { border-top: 0; }
+.mini li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini .overall { font-size: 22px; }
+.empty { color: var(--muted); padding: 24px 6px; text-align: center; }
+footer { margin-top: 24px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Tonight's talent show</p>
+      <h1 class="brand">DubStudio</h1>
+      <p class="tagline"><b>Code</b> scores your timing. <b>AI</b> scores your taste.</p>
+    </div>
+    <div class="live"><span class="dot"></span> LIVE · updated {{.Updated}}</div>
+  </header>
+
+  <main class="grid">
+    <section class="card" aria-labelledby="hof">
+      <h2 id="hof">Hall of Fame</h2>
+      {{if .Top}}
+      <ol class="rank">
+        {{range $i, $t := .Top}}
+        <li class="row r{{inc $i}}">
+          <div class="medal">{{inc $i}}</div>
+          <div class="who">
+            <div class="nick">{{$t.Nickname}}</div>
+            <div class="clipname">{{with index $.Titles $t.ClipID}}{{.}}{{else}}{{$t.ClipID}}{{end}}</div>
+            <div class="chips">
+              <span class="chip">Timing <b>{{$t.Timing}}</b></span>
+              <span class="chip">Emotion <b>{{$t.Emotion}}</b>/10</span>
+              <span class="chip">Comedy <b>{{$t.Comedy}}</b>/10</span>
+            </div>
+          </div>
+          <div class="overall">{{$t.Overall}}</div>
+        </li>
+        {{end}}
+      </ol>
+      {{else}}
+      <p class="empty">The stage is empty. Grab the iPad and be the first act.</p>
+      {{end}}
+    </section>
+
+    <aside class="clips" aria-label="Top per clip">
+      {{range .Clips}}
+      <section class="card mini">
+        <p class="eyebrow">Best of</p>
+        <h3>{{.Clip.Title}}</h3>
+        {{if .Entries}}
+        <ol>
+          {{range .Entries}}<li><span>{{.Nickname}}</span><span class="overall">{{.Overall}}</span></li>{{end}}
+        </ol>
+        {{else}}<p class="muted" style="margin:0;font-size:14px">No takes yet.</p>{{end}}
+      </section>
+      {{end}}
+    </aside>
+  </main>
+
+  <footer>
+    <span>Overall = 50% timing (deterministic IoU) + 50% Gemini emotion &amp; comedy</span>
+    <span>Nicknames only · recordings deleted after 7 days</span>
+  </footer>
+</div>
+</body>
+</html>

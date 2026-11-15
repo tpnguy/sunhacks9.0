@@ -1,0 +1,6 @@
+# Rendered by remote/install.sh: __HOST__ -> <elastic-ip>.sslip.io
+# Caddy gets a real Let's Encrypt cert for it automatically (iOS ATS needs HTTPS).
+__HOST__ {
+	encode zstd gzip
+	reverse_proxy localhost:8080
+}

@@ -1,0 +1,508 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  DubStudio (SunHacks 2026) - EC2 (Go API behind Caddy/HTTPS on <eip>.sslip.io),
+  DynamoDB (takes/clips/players + leaderboard GSIs), S3 media bucket with 7-day
+  dub expiry, least-privilege instance role, CloudWatch logs/EMF metrics, budget.
+
+Parameters:
+  ImageId:
+    Type: AWS::EC2::Image::Id
+    Description: >-
+      Amazon Linux 2023 arm64 AMI. deploy.sh resolves it ONCE from
+      /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64 on first
+      deploy and then keeps the previous value, so a new AMI release never replaces
+      the instance mid-hackathon.
+  InstanceType:
+    Type: String
+    Default: t4g.small
+    AllowedValues: [t4g.micro, t4g.small, t4g.medium]
+  KeyName:
+    Type: String
+    Default: ""
+    Description: Optional EC2 key pair for SSH. Leave empty (recommended) and use SSM Session Manager.
+  VpcId:
+    Type: String
+    Default: ""
+    Description: Optional. Empty = default VPC.
+  SubnetId:
+    Type: String
+    Default: ""
+    Description: Optional public subnet in VpcId. Empty = a default subnet of the default VPC.
+  AlertEmail:
+    Type: String
+    Default: ""
+    Description: Email for the AWS Budgets alert (and the optional CloudWatch alarm). Empty = no budget.
+  MonthlyBudgetUSD:
+    Type: Number
+    Default: 20
+  EnablePITR:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+  EnableAlarms:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: Tier 3 - CloudWatch alarm on the fallback_used EMF metric.
+  MetricsNamespace:
+    Type: String
+    Default: DubStudio
+    Description: EMF namespace the Go server emits into (used only by the alarm).
+  CaddyVersion:
+    Type: String
+    Default: 2.11.9
+  CaddySha512:
+    Type: String
+    Default: 9e5e76d7888542924de2c25353ae87c5f77e2a22c5b1198633cae13688922282e05383d142599205c88d8d80eee5e967d291214d7abce4835329a191b20dd6e0
+    Description: sha512 of caddy_<version>_linux_arm64.tar.gz from the GitHub release checksums file.
+
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, ""]]
+  HasVpcId: !Not [!Equals [!Ref VpcId, ""]]
+  HasSubnetId: !Not [!Equals [!Ref SubnetId, ""]]
+  HasEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+  PITROn: !Equals [!Ref EnablePITR, "true"]
+  AlarmsOn: !Equals [!Ref EnableAlarms, "true"]
+  AlarmsWithEmail: !And [!Condition AlarmsOn, !Condition HasEmail]
+
+Resources:
+  # ---------------------------------------------------------------- DynamoDB
+  TakesTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: dubstudio-takes
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: take_id, AttributeType: S }
+        - { AttributeName: clip_id, AttributeType: S }
+        - { AttributeName: board, AttributeType: S }
+        - { AttributeName: overall, AttributeType: N }
+      KeySchema:
+        - { AttributeName: take_id, KeyType: HASH }
+      GlobalSecondaryIndexes:
+        - IndexName: by_clip
+          KeySchema:
+            - { AttributeName: clip_id, KeyType: HASH }
+            - { AttributeName: overall, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+        - IndexName: global_board
+          KeySchema:
+            - { AttributeName: board, KeyType: HASH }
+            - { AttributeName: overall, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+      # Optional: if the server sets expires_at (epoch seconds), DynamoDB deletes the row for free.
+      TimeToLiveSpecification: { AttributeName: expires_at, Enabled: true }
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [PITROn, true, false]
+      SSESpecification: { SSEEnabled: true }
+      Tags: [{ Key: app, Value: dubstudio }]
+
+  ClipsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: dubstudio-clips
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: clip_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: clip_id, KeyType: HASH }
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [PITROn, true, false]
+      SSESpecification: { SSEEnabled: true }
+      Tags: [{ Key: app, Value: dubstudio }]
+
+  PlayersTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: dubstudio-players
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: player_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: player_id, KeyType: HASH }
+      TimeToLiveSpecification: { AttributeName: expires_at, Enabled: true }
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [PITROn, true, false]
+      SSESpecification: { SSEEnabled: true }
+      Tags: [{ Key: app, Value: dubstudio }]
+
+  # ---------------------------------------------------------------- S3
+  MediaBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete # teardown.sh empties it first
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub dubstudio-media-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+            BucketKeyEnabled: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-dubs-7d # the privacy promise: "deleted after 7 days"
+            Status: Enabled
+            Prefix: dubs/
+            ExpirationInDays: 7
+          - Id: abort-incomplete-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload: { DaysAfterInitiation: 1 }
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods: [GET, PUT, HEAD]
+            AllowedOrigins: ["*"]
+            AllowedHeaders: ["*"]
+            ExposedHeaders: [ETag]
+            MaxAge: 3000
+      Tags: [{ Key: app, Value: dubstudio }]
+
+  MediaBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MediaBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt MediaBucket.Arn
+              - !Sub ${MediaBucket.Arn}/*
+            Condition:
+              Bool: { "aws:SecureTransport": "false" }
+
+  # ---------------------------------------------------------------- CloudWatch
+  ServerLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /dubstudio/server
+      RetentionInDays: 14
+
+  # ---------------------------------------------------------------- IAM
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub dubstudio-ec2-role-${AWS::Region}
+      Description: DubStudio API server - no long-lived keys on the box or in the app.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore # Session Manager + send-command (no SSH)
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy # ship logs/EMF
+      Policies:
+        - PolicyName: dubstudio-least-privilege
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: DynamoTablesAndIndexes
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:BatchWriteItem
+                Resource:
+                  - !GetAtt TakesTable.Arn
+                  - !Sub ${TakesTable.Arn}/index/*
+                  - !GetAtt ClipsTable.Arn
+                  - !GetAtt PlayersTable.Arn
+              - Sid: ScanClipsCatalogOnly # GET /clips lists the (tiny) clip catalog; takes are never scanned
+                Effect: Allow
+                Action: dynamodb:Scan
+                Resource: !GetAtt ClipsTable.Arn
+              - Sid: MediaObjects
+                Effect: Allow
+                Action: [s3:GetObject, s3:PutObject, s3:DeleteObject]
+                Resource:
+                  - !Sub ${MediaBucket.Arn}/clips/*
+                  - !Sub ${MediaBucket.Arn}/dubs/*
+              - Sid: ReadDeployBundle
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub ${MediaBucket.Arn}/deploy/*
+              - Sid: ListMediaPrefixes # lets HeadObject return 404 (not 403) for "still uploading"
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt MediaBucket.Arn
+                Condition:
+                  StringLike:
+                    "s3:prefix": ["clips/*", "dubs/*"]
+              - Sid: ReadConfig
+                Effect: Allow
+                Action: [ssm:GetParameter, ssm:GetParameters, ssm:GetParametersByPath]
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/dubstudio
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/dubstudio/*
+              - Sid: DecryptSecureStringViaSSMOnly
+                Effect: Allow
+                Action: kms:Decrypt
+                Resource: !Sub arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*
+                Condition:
+                  StringEquals:
+                    "kms:ViaService": !Sub ssm.${AWS::Region}.amazonaws.com
+      Tags: [{ Key: app, Value: dubstudio }]
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub dubstudio-ec2-profile-${AWS::Region}
+      Roles: [!Ref InstanceRole]
+
+  # ---------------------------------------------------------------- Network
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: DubStudio - HTTP (ACME + redirect) and HTTPS only
+      VpcId: !If [HasVpcId, !Ref VpcId, !Ref "AWS::NoValue"]
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0, Description: HTTP (Lets Encrypt + redirect) }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0, Description: HTTPS }
+        - { IpProtocol: udp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0, Description: HTTP/3 }
+        - !If
+          - HasKeyName
+          - { IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: 0.0.0.0/0, Description: SSH (only because KeyName was set) }
+          - !Ref "AWS::NoValue"
+      Tags: [{ Key: Name, Value: dubstudio-sg }]
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags: [{ Key: Name, Value: dubstudio-eip }]
+
+  # Launch template only carries static settings (IMDSv2); UserData lives on the instance.
+  ServerLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: dubstudio-server
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpTokens: required
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 1
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs: { VolumeSize: 16, VolumeType: gp3, Encrypted: true, DeleteOnTermination: true }
+
+  ServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      LaunchTemplate:
+        LaunchTemplateId: !Ref ServerLaunchTemplate
+        Version: !GetAtt ServerLaunchTemplate.LatestVersionNumber
+      IamInstanceProfile: !Ref InstanceProfile
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref "AWS::NoValue"]
+      SubnetId: !If [HasSubnetId, !Ref SubnetId, !Ref "AWS::NoValue"]
+      SecurityGroupIds: [!GetAtt ServerSecurityGroup.GroupId]
+      Tags:
+        - { Key: Name, Value: dubstudio-server }
+        - { Key: app, Value: dubstudio }
+      # Note: UserData runs only on first boot. The app binary, systemd unit and Caddyfile
+      # are (re)installed by push.sh via SSM send-command.
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+          exec > >(tee -a /var/log/dubstudio-bootstrap.log) 2>&1
+          echo "dubstudio bootstrap start $(date -Is)"
+
+          EIP="${ElasticIP}"
+          HOST="$EIP.sslip.io"
+
+          # --- packages (AL2023 ships the SSM agent + aws cli already)
+          dnf install -y amazon-cloudwatch-agent tar gzip logrotate
+
+          # --- app user + dirs
+          id dubstudio >/dev/null 2>&1 || useradd --system --home-dir /opt/dubstudio --shell /sbin/nologin dubstudio
+          mkdir -p /opt/dubstudio /var/log/dubstudio
+          chown dubstudio:dubstudio /var/log/dubstudio
+          echo "$HOST" > /opt/dubstudio/host
+          echo "${AWS::Region}" > /opt/dubstudio/region
+          echo "${MediaBucket}" > /opt/dubstudio/bucket
+
+          cat > /etc/logrotate.d/dubstudio <<'EOF'
+          /var/log/dubstudio/*.log {
+            daily
+            rotate 7
+            maxsize 50M
+            missingok
+            notifempty
+            compress
+            copytruncate
+          }
+          EOF
+
+          # --- CloudWatch agent: tail the server's stdout file -> /dubstudio/server.
+          # CloudWatch Logs auto-extracts EMF JSON lines into metrics (no header needed).
+          mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
+          cat > /opt/aws/amazon-cloudwatch-agent/etc/dubstudio-cwagent.json <<'EOF'
+          {
+            "agent": { "run_as_user": "root" },
+            "logs": {
+              "logs_collected": {
+                "files": {
+                  "collect_list": [
+                    { "file_path": "/var/log/dubstudio/server.log",
+                      "log_group_name": "/dubstudio/server",
+                      "log_stream_name": "{instance_id}" },
+                    { "file_path": "/var/log/dubstudio-bootstrap.log",
+                      "log_group_name": "/dubstudio/server",
+                      "log_stream_name": "{instance_id}-bootstrap" }
+                  ]
+                }
+              }
+            }
+          }
+          EOF
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s \
+            -c file:/opt/aws/amazon-cloudwatch-agent/etc/dubstudio-cwagent.json
+
+          # --- Caddy (static arm64 release binary, checksum-verified)
+          id caddy >/dev/null 2>&1 || useradd --system --home-dir /var/lib/caddy --create-home --shell /sbin/nologin caddy
+          cd /tmp
+          for i in 1 2 3 4 5; do
+            curl -fsSLo caddy.tgz "https://github.com/caddyserver/caddy/releases/download/v${CaddyVersion}/caddy_${CaddyVersion}_linux_arm64.tar.gz" && break
+            sleep 5
+          done
+          echo "${CaddySha512}  caddy.tgz" | sha512sum -c -
+          tar -xzf caddy.tgz caddy
+          install -m 0755 caddy /usr/bin/caddy
+          rm -f caddy caddy.tgz
+          mkdir -p /etc/caddy
+          cat > /etc/caddy/Caddyfile <<EOF
+          $HOST {
+          	encode zstd gzip
+          	reverse_proxy localhost:8080
+          }
+          EOF
+          cat > /etc/systemd/system/caddy.service <<'EOF'
+          [Unit]
+          Description=Caddy
+          After=network.target network-online.target
+          Requires=network-online.target
+
+          [Service]
+          Type=notify
+          User=caddy
+          Group=caddy
+          ExecStart=/usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
+          ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --force
+          TimeoutStopSec=5s
+          LimitNOFILE=1048576
+          PrivateTmp=true
+          ProtectSystem=full
+          AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          systemctl daemon-reload
+          systemctl enable caddy
+
+          # --- Wait until the Elastic IP is actually attached before Caddy asks
+          # Let's Encrypt for a cert (otherwise the HTTP-01 challenge hits nobody).
+          for i in $(seq 1 90); do
+            TOKEN=$(curl -fsS -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 300" || true)
+            CUR=$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4 || true)
+            [ "$CUR" = "$EIP" ] && break
+            echo "waiting for EIP $EIP (have '$CUR')"; sleep 5
+          done
+          systemctl start caddy
+          echo "dubstudio bootstrap done $(date -Is) host=$HOST"
+
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      InstanceId: !Ref ServerInstance
+
+  # ---------------------------------------------------------------- Cost guardrail
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Condition: HasEmail
+    Properties:
+      Budget:
+        BudgetName: dubstudio-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit: { Amount: !Ref MonthlyBudgetUSD, Unit: USD }
+      NotificationsWithSubscribers:
+        - Notification: { NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 50, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref AlertEmail }]
+        - Notification: { NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref AlertEmail }]
+        - Notification: { NotificationType: FORECASTED, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref AlertEmail }]
+
+  # ---------------------------------------------------------------- Tier 3 alarm (off by default)
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Condition: AlarmsWithEmail
+    Properties:
+      TopicName: dubstudio-alarms
+      Subscription: [{ Protocol: email, Endpoint: !Ref AlertEmail }]
+
+  FallbackAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: AlarmsOn
+    Properties:
+      AlarmName: dubstudio-gemini-fallbacks
+      AlarmDescription: Gemini scoring fell back to the canned scorecard 3+ times in 5 minutes.
+      Namespace: !Ref MetricsNamespace
+      MetricName: fallback_used # must be emitted with an empty dimension set ([[]]) to match
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [AlarmsWithEmail, [!Ref AlarmTopic], !Ref "AWS::NoValue"]
+
+Outputs:
+  PublicIP:
+    Value: !Ref ElasticIP
+  Host:
+    Value: !Sub ${ElasticIP}.sslip.io
+  BaseURL:
+    Value: !Sub https://${ElasticIP}.sslip.io
+  BucketName:
+    Value: !Ref MediaBucket
+  TableNames:
+    Value: !Join [",", [!Ref TakesTable, !Ref ClipsTable, !Ref PlayersTable]]
+  TakesTable:
+    Value: !Ref TakesTable
+  ClipsTable:
+    Value: !Ref ClipsTable
+  PlayersTable:
+    Value: !Ref PlayersTable
+  InstanceId:
+    Value: !Ref ServerInstance
+  LogGroup:
+    Value: !Ref ServerLogGroup
+  Region:
+    Value: !Ref AWS::Region

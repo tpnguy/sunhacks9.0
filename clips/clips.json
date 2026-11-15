@@ -1,0 +1,247 @@
+[
+  {
+    "clip_id": "tos-breakup",
+    "title": "Tears of Steel — The Breakup",
+    "video_file": "tos-breakup.mp4",
+    "duration": 14.0,
+    "speech_windows": [
+      {
+        "start": 1.04,
+        "end": 13.68
+      }
+    ],
+    "beats": [
+      {
+        "t": 1.0,
+        "desc": "Celia jabs her robot hand at him: \"You're a jerk, Thom.\"",
+        "emotion": "anger"
+      },
+      {
+        "t": 2.0,
+        "desc": "Thom, all self-justifying: \"Look Celia, we have to follow our passions\"",
+        "emotion": "smug"
+      },
+      {
+        "t": 5.0,
+        "desc": "Thom gets dreamy: \"...I just want to be awesome in space\"",
+        "emotion": "joy"
+      },
+      {
+        "t": 8.1,
+        "desc": "Celia fires back: \"Why don't you just admit you're freaked out by my robot hand?\"",
+        "emotion": "sarcasm"
+      },
+      {
+        "t": 12.2,
+        "desc": "Thom splutters a denial: \"I'm not freaked out by— it's...\"",
+        "emotion": "panic"
+      }
+    ],
+    "license": "CC-BY 3.0",
+    "attribution": "Tears of Steel (CC-BY 3.0) (c) Blender Foundation | mango.blender.org"
+  },
+  {
+    "clip_id": "tos-crush",
+    "title": "Tears of Steel — You Broke My Heart",
+    "video_file": "tos-crush.mp4",
+    "duration": 14.0,
+    "speech_windows": [
+      {
+        "start": 0.55,
+        "end": 1.15
+      },
+      {
+        "start": 2.3,
+        "end": 3.8
+      },
+      {
+        "start": 5.0,
+        "end": 6.3
+      },
+      {
+        "start": 7.4,
+        "end": 7.85
+      },
+      {
+        "start": 8.55,
+        "end": 9.9
+      },
+      {
+        "start": 10.8,
+        "end": 11.2
+      },
+      {
+        "start": 11.9,
+        "end": 13.8
+      }
+    ],
+    "beats": [
+      {
+        "t": 0.0,
+        "desc": "ERROR!!! screens flash red",
+        "emotion": "suspense"
+      },
+      {
+        "t": 0.6,
+        "desc": "the scientist screams \"No!\"",
+        "emotion": "panic"
+      },
+      {
+        "t": 2.3,
+        "desc": "a second, longer \"Nooo!\"",
+        "emotion": "panic"
+      },
+      {
+        "t": 5.0,
+        "desc": "close-up on Celia: \"You broke my heart.\"",
+        "emotion": "sadness"
+      },
+      {
+        "t": 7.4,
+        "desc": "Thom, eyes shut in the robot's grip: \"I know.\"",
+        "emotion": "deadpan"
+      },
+      {
+        "t": 8.6,
+        "desc": "Celia: \"You forgot me on Earth.\"",
+        "emotion": "anger"
+      },
+      {
+        "t": 10.8,
+        "desc": "Thom again: \"I know.\"",
+        "emotion": "deadpan"
+      },
+      {
+        "t": 11.9,
+        "desc": "Celia snarls: \"I should just crush you!\"",
+        "emotion": "anger"
+      }
+    ],
+    "license": "CC-BY 3.0",
+    "attribution": "Tears of Steel (CC-BY 3.0) (c) Blender Foundation | mango.blender.org"
+  },
+  {
+    "clip_id": "notld-barbara",
+    "title": "Night of the Living Dead — They're Coming to Get You",
+    "video_file": "notld-barbara.mp4",
+    "duration": 14.31,
+    "speech_windows": [
+      {
+        "start": 0.66,
+        "end": 1.58
+      },
+      {
+        "start": 2.1,
+        "end": 3.56
+      },
+      {
+        "start": 3.9,
+        "end": 5.42
+      },
+      {
+        "start": 9.75,
+        "end": 12.36
+      },
+      {
+        "start": 13.46,
+        "end": 14.18
+      }
+    ],
+    "beats": [
+      {
+        "t": 0.7,
+        "desc": "Barbara warns him: \"Johnny.\"",
+        "emotion": "annoyance"
+      },
+      {
+        "t": 2.1,
+        "desc": "Johnny teases: \"You're still afraid.\"",
+        "emotion": "mockery"
+      },
+      {
+        "t": 3.9,
+        "desc": "Barbara: \"Stop it now. I mean it.\"",
+        "emotion": "anger"
+      },
+      {
+        "t": 5.5,
+        "desc": "she turns away; Johnny grins and lets the silence hang",
+        "emotion": "suspense"
+      },
+      {
+        "t": 9.8,
+        "desc": "Johnny's spooky voice: \"They're coming to get you, Barbara!\"",
+        "emotion": "mockery"
+      },
+      {
+        "t": 12.4,
+        "desc": "cut to the empty graveyard",
+        "emotion": "suspense"
+      },
+      {
+        "t": 13.5,
+        "desc": "Barbara, fed up: \"Stop it!\"",
+        "emotion": "anger"
+      }
+    ],
+    "license": "Public Domain (US)",
+    "attribution": "Night of the Living Dead (1968, dir. George A. Romero) — public domain | archive.org"
+  },
+  {
+    "clip_id": "hgf-reno",
+    "title": "His Girl Friday — Six Weeks in Reno",
+    "video_file": "hgf-reno.mp4",
+    "duration": 14.08,
+    "speech_windows": [
+      {
+        "start": 0.38,
+        "end": 2.09
+      },
+      {
+        "start": 3.7,
+        "end": 5.38
+      },
+      {
+        "start": 5.85,
+        "end": 9.42
+      },
+      {
+        "start": 10.14,
+        "end": 11.53
+      },
+      {
+        "start": 12.41,
+        "end": 13.85
+      }
+    ],
+    "beats": [
+      {
+        "t": 0.4,
+        "desc": "Walter, phone in hand, all charm: \"How long is it since we've seen each other?\"",
+        "emotion": "charm"
+      },
+      {
+        "t": 3.7,
+        "desc": "Hildy, unimpressed: \"Oh, well, let's see...\"",
+        "emotion": "deadpan"
+      },
+      {
+        "t": 5.9,
+        "desc": "Hildy counts it off: \"Six weeks in Reno, then Bermuda... about four months, I guess.\"",
+        "emotion": "deadpan"
+      },
+      {
+        "t": 10.1,
+        "desc": "Hildy: \"Seems like yesterday to me.\"",
+        "emotion": "sarcasm"
+      },
+      {
+        "t": 12.4,
+        "desc": "back to Walter, unbothered: \"Maybe it was yesterday, Hildy.\"",
+        "emotion": "smug"
+      }
+    ],
+    "license": "Public Domain (US)",
+    "attribution": "His Girl Friday (1940, dir. Howard Hawks) — public domain | archive.org"
+  }
+]

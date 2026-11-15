@@ -1,0 +1,34 @@
+# Installed to /etc/systemd/system/dubstudio.service by push.sh (remote/install.sh).
+[Unit]
+Description=DubStudio Go API (:8080, behind Caddy)
+After=network-online.target
+Wants=network-online.target
+# never give up restarting during the demo
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=dubstudio
+Group=dubstudio
+WorkingDirectory=/opt/dubstudio
+# "+" = run as root: refresh /opt/dubstudio/env from SSM Parameter Store /dubstudio/*
+# (keeps the previous env file if SSM is unreachable).
+ExecStartPre=+/opt/dubstudio/fetch-env.sh
+EnvironmentFile=-/opt/dubstudio/env
+ExecStart=/opt/dubstudio/dubstudio-server
+Restart=always
+RestartSec=2
+# stdout/stderr go to a file the CloudWatch agent tails -> log group /dubstudio/server.
+# EMF JSON lines printed to stdout become CloudWatch metrics automatically.
+StandardOutput=append:/var/log/dubstudio/server.log
+StandardError=append:/var/log/dubstudio/server.log
+# hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+StateDirectory=dubstudio
+ReadWritePaths=/var/log/dubstudio
+
+[Install]
+WantedBy=multi-user.target

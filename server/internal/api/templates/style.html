@@ -1,0 +1,70 @@
+{{define "head"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07070b;
+  --stage: #12111a;
+  --card: #18161f;
+  --line: #2a2733;
+  --text: #f4f1e8;
+  --muted: #9b96a8;
+  --gold: #f5c518;
+  --gold-soft: #ffd95a;
+  --silver: #c9ccd6;
+  --bronze: #d08a4c;
+  --curtain: #7a1424;
+  --display: "Bebas Neue", "Impact", "Arial Narrow", system-ui, sans-serif;
+  --body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% -8%, rgba(245,197,24,.22), rgba(245,197,24,.05) 45%, transparent 70%),
+    linear-gradient(90deg, rgba(122,20,36,.35), transparent 9%, transparent 91%, rgba(122,20,36,.35)),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--gold-soft); }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+.brand {
+  font-family: var(--display);
+  letter-spacing: .06em;
+  color: var(--gold);
+  text-shadow: 0 0 24px rgba(245,197,24,.45);
+  margin: 0;
+  line-height: .95;
+}
+.eyebrow { color: var(--muted); text-transform: uppercase; letter-spacing: .18em; font-size: 12px; margin: 0 0 6px; }
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,.035), transparent 40%), var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+}
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  font-size: 12px; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.chip b { color: var(--text); font-weight: 600; }
+.overall { font-family: var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.btn {
+  appearance: none; border: 1px solid var(--line); background: transparent; color: var(--text);
+  border-radius: 999px; padding: 10px 18px; font: inherit; cursor: pointer;
+}
+.btn-danger { border-color: #5a2430; color: #ff9aa8; }
+.btn-danger:hover { background: rgba(255,80,100,.08); }
+</style>
+{{end}}

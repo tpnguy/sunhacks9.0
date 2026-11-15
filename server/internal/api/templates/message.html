@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>DubStudio {{.Title}}</title>
+<meta name="robots" content="noindex">
+{{template "head"}}
+<style>
+.wrap { max-width: 560px; text-align: center; padding-top: 12vh; }
+h1.brand { font-size: 40px; margin-bottom: 24px; }
+h2 { margin: 0 0 8px; font-size: 24px; }
+p { color: var(--muted); margin: 0; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="brand">DubStudio</h1>
+  <div class="card">
+    <h2>{{.Heading}}</h2>
+    <p>{{.Body}}</p>
+  </div>
+</div>
+</body>
+</html>

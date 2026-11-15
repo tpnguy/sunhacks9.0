@@ -1,0 +1,30 @@
+[
+  {
+    "clip_id": "tos-bridge",
+    "title": "Tears of Steel — The Bridge",
+    "video_file": "tos-bridge.mp4",
+    "duration": 14.2,
+    "speech_windows": [{"start": 1.20, "end": 3.85}, {"start": 6.10, "end": 8.40}],
+    "beats": [
+      {"t": 1.2, "desc": "he pleads with her, voice cracking", "emotion": "desperation"},
+      {"t": 4.0, "desc": "he slams the table", "emotion": "anger"},
+      {"t": 9.0, "desc": "long awkward silence", "emotion": "deadpan"}
+    ],
+    "license": "CC-BY 3.0",
+    "attribution": "Tears of Steel (CC-BY) Blender Foundation | mango.blender.org"
+  },
+  {
+    "clip_id": "placeholder-psa",
+    "title": "Placeholder — 1950s Safety PSA",
+    "video_file": "placeholder-psa.mp4",
+    "duration": 12.0,
+    "speech_windows": [{"start": 0.80, "end": 4.20}, {"start": 7.00, "end": 10.50}],
+    "beats": [
+      {"t": 1.0, "desc": "narrator introduces the topic with total confidence", "emotion": "earnest"},
+      {"t": 5.5, "desc": "a child drops a jar of marbles", "emotion": "panic"},
+      {"t": 8.0, "desc": "narrator delivers the moral of the story", "emotion": "smug"}
+    ],
+    "license": "Public Domain",
+    "attribution": "Placeholder clip for tests (Prelinger Archives, public domain)"
+  }
+]

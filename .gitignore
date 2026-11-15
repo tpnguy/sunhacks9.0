@@ -1,0 +1,22 @@
+.env
+*.env
+!.env.example
+*.pem
+*.key
+*secret*
+*key*.txt
+.DS_Store
+*.xcuserstate
+xcuserdata/
+DerivedData/
+build/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+clips/raw/
+clips/work/
+infra/outputs.json
+server/dubstudio-server
+server/bin/
+
+# Local planning docs (not published)
+API.md
+PLAN.md

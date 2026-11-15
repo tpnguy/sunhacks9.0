@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>DubStudio Take</title>
+{{if .Uploading}}<meta http-equiv="refresh" content="5">{{end}}
+<meta name="robots" content="noindex">
+{{template "head"}}
+<style>
+.wrap { max-width: 720px; }
+header { text-align: center; margin: 8px 0 20px; }
+header h1 { font-size: 44px; }
+.video { width: 100%; border-radius: 14px; background: #000; display: block; aspect-ratio: 16 / 9; }
+.pending { aspect-ratio: 16 / 9; border-radius: 14px; border: 1px dashed var(--line); display: grid; place-items: center; text-align: center; color: var(--muted); padding: 16px; }
+.pending b { color: var(--text); display: block; font-size: 18px; margin-bottom: 4px; }
+.score { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
+.score .nick { font-size: 26px; font-weight: 700; }
+.score .overall { font-size: 72px; line-height: 1; }
+.bubble { position: relative; margin-top: 18px; background: #221f2b; border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; font-size: 19px; line-height: 1.4; }
+.bubble::before { content: "\201C"; font-family: var(--display); color: var(--gold); font-size: 54px; position: absolute; left: 12px; top: -18px; }
+.bubble p { margin: 0 0 0 18px; }
+.reasons { margin: 14px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 14px; }
+.reasons li { padding: 4px 0; }
+.credit { margin-top: 18px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.actions { margin-top: 22px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">A DubStudio performance</p>
+    <h1 class="brand">DubStudio</h1>
+  </header>
+
+  <main class="card">
+    {{if .VideoURL}}
+    <video class="video" src="{{.VideoURL}}" controls playsinline preload="metadata"></video>
+    {{else if .Uploading}}
+    <div class="pending"><div><b>Still uploading…</b>This page refreshes by itself. Your scorecard is below.</div></div>
+    {{end}}
+
+    <div class="score">
+      <div>
+        <div class="nick">{{.Take.Nickname}}</div>
+        <div class="muted">{{if .HasClip}}{{.Clip.Title}}{{else}}{{.Take.ClipID}}{{end}}</div>
+      </div>
+      <div class="overall" aria-label="Overall score">{{.Take.Overall}}</div>
+    </div>
+    <div class="chips" style="margin-top:10px">
+      <span class="chip">Timing <b>{{.Take.Timing}}</b>/100</span>
+      <span class="chip">Emotion <b>{{.Take.Emotion}}</b>/10</span>
+      <span class="chip">Comedy <b>{{.Take.Comedy}}</b>/10</span>
+    </div>
+
+    <div class="bubble"><p>{{.Take.Roast}}</p></div>
+    {{if or .Take.EmotionReason .Take.ComedyReason}}
+    <ul class="reasons">
+      {{with .Take.EmotionReason}}<li>Emotion: {{.}}</li>{{end}}
+      {{with .Take.ComedyReason}}<li>Comedy: {{.}}</li>{{end}}
+    </ul>
+    {{end}}
+
+    {{if .HasClip}}
+    <p class="credit">Clip: {{.Clip.Attribution}}{{with .Clip.License}} · {{.}}{{end}}. Dubbed by {{.Take.Nickname}}; original audio replaced.</p>
+    {{end}}
+  </main>
+
+  <div class="actions">
+    <span class="muted">This take is deleted automatically after 7 days.</span>
+    <form method="post" action="/d/{{.Take.TakeID}}/delete" onsubmit="return confirm('Delete this take, its video and its score for good?');">
+      <button class="btn btn-danger" type="submit">Delete my take</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

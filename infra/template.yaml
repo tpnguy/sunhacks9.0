@@ -28,6 +28,12 @@ Parameters:
     Type: String
     Default: ""
     Description: Optional public subnet in VpcId. Empty = a default subnet of the default VPC.
+  DomainName:
+    Type: String
+    Default: ""
+    Description: >-
+      Optional custom domain (A record -> the Elastic IP, set at the registrar). Caddy serves it
+      alongside <eip>.sslip.io and it becomes the public base URL for share links.
   AlertEmail:
     Type: String
     Default: ""
@@ -61,6 +67,7 @@ Conditions:
   HasVpcId: !Not [!Equals [!Ref VpcId, ""]]
   HasSubnetId: !Not [!Equals [!Ref SubnetId, ""]]
   HasEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+  HasDomain: !Not [!Equals [!Ref DomainName, ""]]
   PITROn: !Equals [!Ref EnablePITR, "true"]
   AlarmsOn: !Equals [!Ref EnableAlarms, "true"]
   AlarmsWithEmail: !And [!Condition AlarmsOn, !Condition HasEmail]
@@ -635,8 +642,10 @@ Outputs:
     Value: !Ref ElasticIP
   Host:
     Value: !Sub ${ElasticIP}.sslip.io
-  BaseURL:
-    Value: !Sub https://${ElasticIP}.sslip.io
+  SiteHosts: # Caddy site addresses (each gets its own Let's Encrypt cert)
+    Value: !If [HasDomain, !Sub "${DomainName}, ${ElasticIP}.sslip.io", !Sub "${ElasticIP}.sslip.io"]
+  BaseURL: # public base URL for QR/share links
+    Value: !If [HasDomain, !Sub "https://${DomainName}", !Sub "https://${ElasticIP}.sslip.io"]
   BucketName:
     Value: !Ref MediaBucket
   TableNames:

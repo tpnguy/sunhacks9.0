@@ -13,6 +13,7 @@ require_aws
 BUCKET=$(out BucketName)
 IID=$(out InstanceId)
 HOST=$(out Host)
+SITES=$(python3 -c 'import json,sys; o=json.load(open(sys.argv[1])); print(o.get("SiteHosts", o["Host"]))' "$OUTPUTS")
 BIN="$ROOT_DIR/server/bin/dubstudio-server-linux-arm64"
 
 if [ "$BUILD" = 1 ]; then
@@ -51,8 +52,8 @@ PARAMS=$(python3 -c 'import json,sys; b,k,h,r=sys.argv[1:]; print(json.dumps({"c
   "rm -rf /tmp/dubstudio-bundle && mkdir -p /tmp/dubstudio-bundle",
   f"aws s3 cp s3://{b}/{k} /tmp/dubstudio-bundle.tar.gz --region {r} --only-show-errors",
   "tar -xzf /tmp/dubstudio-bundle.tar.gz -C /tmp/dubstudio-bundle",
-  f"bash /tmp/dubstudio-bundle/install.sh {h}"],
-  "executionTimeout":["900"]}))' "$BUCKET" "$KEY" "$HOST" "$AWS_REGION")
+  f"bash /tmp/dubstudio-bundle/install.sh \"{h}\""],
+  "executionTimeout":["900"]}))' "$BUCKET" "$KEY" "$SITES" "$AWS_REGION")
 
 log "Running install on $IID via SSM Run Command"
 CMD_ID=$(aws ssm send-command --instance-ids "$IID" --document-name AWS-RunShellScript \

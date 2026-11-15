@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Create/update the `dubstudio` CloudFormation stack and its SSM config. Idempotent.
 #   ./deploy.sh you@example.com        # email gets the $20/mo budget alert (optional)
-# Env overrides: AWS_REGION (us-west-2), KEY_NAME (SSH key, discouraged), ENABLE_ALARMS=true,
+# Env overrides: DOMAIN (custom domain, A record -> EIP), AWS_REGION (us-west-2), KEY_NAME (SSH key, discouraged), ENABLE_ALARMS=true,
 #                ENABLE_PITR=true, BUDGET_USD=20
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
@@ -28,6 +28,7 @@ if [ "$status" = NONE ] || [ "$status" = DELETE_COMPLETE ]; then
   params+=("ImageId=$AMI")
 fi
 [ -n "$EMAIL" ]                 && params+=("AlertEmail=$EMAIL")
+[ -n "${DOMAIN:-}" ]            && params+=("DomainName=$DOMAIN")
 [ -n "${KEY_NAME:-}" ]          && params+=("KeyName=$KEY_NAME")
 [ -n "${ENABLE_ALARMS:-}" ]     && params+=("EnableAlarms=$ENABLE_ALARMS")
 [ -n "${ENABLE_PITR:-}" ]       && params+=("EnablePITR=$ENABLE_PITR")

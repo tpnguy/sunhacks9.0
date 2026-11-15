@@ -1,6 +1,6 @@
 #!/bin/bash
 # Runs on the EC2 box as root via `aws ssm send-command` (see push.sh).
-# Usage: install.sh <host>   (bundle files sit next to this script)
+# Usage: install.sh "<host>[, <host>...]"   (Caddy site addresses; bundle files sit next to this script)
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 HOST=${1:-$(cat /opt/dubstudio/host)}

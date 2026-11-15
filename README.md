@@ -6,7 +6,7 @@ Players watch a muted ~15-second movie clip and improvise the voice acting live.
 
 > Timing and delivery are hard to practice alone because nobody gives you feedback. LARPStudio scores both in about 15 seconds.
 
-Built at **SunHacks 2026** (ASU, Nov 14–15).
+Built at **SunHacks 2026** (ASU, Nov 14–15). Live leaderboard: **https://larpstudio.vodka/board**
 
 ---
 

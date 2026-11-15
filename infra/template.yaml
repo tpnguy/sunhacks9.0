@@ -185,6 +185,55 @@ Resources:
             Condition:
               Bool: { "aws:SecureTransport": "false" }
 
+  # ---------------------------------------------------------------- SQS (async re-score)
+  # Takes that got the fallback scorecard (Gemini down/slow) are queued by take_id.
+  # A worker on the server long-polls, re-scores from the S3 audio, and updates
+  # DynamoDB. Unscorable messages reappear after the visibility timeout (backoff
+  # during an outage) and land in the DLQ after 20 tries (~40 min).
+  RescoreDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: dubstudio-rescore-dlq
+      MessageRetentionPeriod: 345600 # 4 days; messages hold only a take_id
+      SqsManagedSseEnabled: true
+      Tags: [{ Key: app, Value: dubstudio }]
+
+  RescoreQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: dubstudio-rescore
+      VisibilityTimeout: 120 # > worst-case judge time (2 attempts x 15 s) + slack; also the retry backoff
+      MessageRetentionPeriod: 86400
+      ReceiveMessageWaitTimeSeconds: 20 # long polling
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt RescoreDLQ.Arn
+        maxReceiveCount: 20
+      Tags: [{ Key: app, Value: dubstudio }]
+
+  RescoreQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref RescoreQueue, !Ref RescoreDLQ]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # SQS policies allow exactly one resource per statement.
+          - Sid: DenyInsecureTransportQueue
+            Effect: Deny
+            Principal: "*"
+            Action: "sqs:*"
+            Resource: !GetAtt RescoreQueue.Arn
+            Condition:
+              Bool: { "aws:SecureTransport": "false" }
+          - Sid: DenyInsecureTransportDLQ
+            Effect: Deny
+            Principal: "*"
+            Action: "sqs:*"
+            Resource: !GetAtt RescoreDLQ.Arn
+            Condition:
+              Bool: { "aws:SecureTransport": "false" }
+
   # ---------------------------------------------------------------- CloudWatch
   ServerLogGroup:
     Type: AWS::Logs::LogGroup
@@ -249,6 +298,10 @@ Resources:
                 Condition:
                   StringLike:
                     "s3:prefix": ["clips/*", "dubs/*"]
+              - Sid: RescoreQueue # producer + consumer on the one queue; DLQ is inspect-only from the console
+                Effect: Allow
+                Action: [sqs:SendMessage, sqs:ReceiveMessage, sqs:DeleteMessage, sqs:ChangeMessageVisibility, sqs:GetQueueAttributes]
+                Resource: !GetAtt RescoreQueue.Arn
               - Sid: ReadConfig
                 Effect: Allow
                 Action: [ssm:GetParameter, ssm:GetParameters, ssm:GetParametersByPath]
@@ -474,7 +527,8 @@ Resources:
       AlarmName: dubstudio-gemini-fallbacks
       AlarmDescription: Gemini scoring fell back to the canned scorecard 3+ times in 5 minutes.
       Namespace: !Ref MetricsNamespace
-      MetricName: fallback_used # must be emitted with an empty dimension set ([[]]) to match
+      MetricName: fallback_used
+      Dimensions: [{ Name: Service, Value: dubstudio-server }] # matches the server's EMF dimension set
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1
@@ -482,6 +536,99 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
       AlarmActions: !If [AlarmsWithEmail, [!Ref AlarmTopic], !Ref "AWS::NoValue"]
+
+  RescoreDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: AlarmsOn
+    Properties:
+      AlarmName: dubstudio-rescore-dlq
+      AlarmDescription: A take could not be re-scored after 20 tries (Gemini down ~40 min or a bug).
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions: [{ Name: QueueName, Value: !GetAtt RescoreDLQ.QueueName }]
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [AlarmsWithEmail, [!Ref AlarmTopic], !Ref "AWS::NoValue"]
+
+  # ---------------------------------------------------------------- Dashboard
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: dubstudio
+      DashboardBody: !Sub
+        - |
+          {
+            "start": "-PT12H",
+            "widgets": [
+              {"type": "text", "x": 0, "y": 0, "width": 24, "height": 2, "properties": {"markdown":
+                "## DubStudio - scoring pipeline\nCode scores timing, Gemini scores taste. Fallback takes are re-scored asynchronously via SQS (`dubstudio-rescore`, DLQ after 20 tries)."}},
+
+              {"type": "metric", "x": 0, "y": 2, "width": 12, "height": 6, "properties": {
+                "title": "End-of-take -> scorecard latency (ms)", "region": "${AWS::Region}", "view": "timeSeries", "period": 300,
+                "metrics": [
+                  ["${NS}", "scoring_latency_ms", "Service", "${SVC}", {"stat": "p50", "label": "p50"}],
+                  ["...", {"stat": "p95", "label": "p95"}],
+                  ["...", {"stat": "Maximum", "label": "max"}]
+                ],
+                "yAxis": {"left": {"min": 0}}}},
+
+              {"type": "metric", "x": 12, "y": 2, "width": 12, "height": 6, "properties": {
+                "title": "Takes vs. Gemini fallbacks", "region": "${AWS::Region}", "view": "timeSeries", "period": 300, "stat": "Sum",
+                "metrics": [
+                  ["${NS}", "scoring_latency_ms", "Service", "${SVC}", {"stat": "SampleCount", "label": "takes", "id": "takes"}],
+                  [".", "fallback_used", ".", ".", {"label": "fallback scorecards", "id": "fb"}],
+                  [".", "gemini_timeout", ".", ".", {"label": "Gemini timeouts"}],
+                  [{"expression": "IF(takes > 0, 100 * fb / takes, 0)", "label": "fallback rate %", "yAxis": "right"}]
+                ],
+                "yAxis": {"left": {"min": 0}, "right": {"min": 0, "max": 100}}}},
+
+              {"type": "metric", "x": 0, "y": 8, "width": 8, "height": 6, "properties": {
+                "title": "Async re-score outcomes (SQS worker)", "region": "${AWS::Region}", "view": "timeSeries", "period": 300, "stat": "Sum",
+                "metrics": [
+                  ["${NS}", "rescore_success", "Service", "${SVC}", {"label": "re-scored"}],
+                  [".", "rescore_retry", ".", ".", {"label": "Gemini still down (retry)"}],
+                  [".", "rescore_dropped", ".", ".", {"label": "dropped (deleted / already scored)"}]
+                ]}},
+
+              {"type": "metric", "x": 8, "y": 8, "width": 8, "height": 6, "properties": {
+                "title": "Re-score queue depth", "region": "${AWS::Region}", "view": "timeSeries", "period": 60, "stat": "Maximum",
+                "metrics": [
+                  ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${Q}", {"label": "waiting"}],
+                  [".", "ApproximateNumberOfMessagesNotVisible", ".", ".", {"label": "in flight / backing off"}],
+                  [".", "ApproximateNumberOfMessagesVisible", ".", "${DLQ}", {"label": "dead-letter"}]
+                ]}},
+
+              {"type": "metric", "x": 16, "y": 8, "width": 8, "height": 6, "properties": {
+                "title": "Time from fallback to real score (ms)", "region": "${AWS::Region}", "view": "timeSeries", "period": 300,
+                "metrics": [
+                  ["${NS}", "rescore_delay_ms", "Service", "${SVC}", {"stat": "p50", "label": "p50"}],
+                  ["...", {"stat": "Maximum", "label": "max"}]
+                ]}},
+
+              {"type": "metric", "x": 0, "y": 14, "width": 12, "height": 6, "properties": {
+                "title": "DynamoDB takes table (leaderboard reads via GSIs, no scans)", "region": "${AWS::Region}", "view": "timeSeries", "period": 300, "stat": "Sum",
+                "metrics": [
+                  ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${TakesTable}", {"label": "RCU"}],
+                  [".", "ConsumedWriteCapacityUnits", ".", ".", {"label": "WCU"}],
+                  [".", "TimeToLiveDeletedItemCount", ".", ".", {"label": "expired by TTL (7-day promise)"}]
+                ]}},
+
+              {"type": "metric", "x": 12, "y": 14, "width": 12, "height": 6, "properties": {
+                "title": "EC2 API server", "region": "${AWS::Region}", "view": "timeSeries", "period": 300, "stat": "Average",
+                "metrics": [
+                  ["AWS/EC2", "CPUUtilization", "InstanceId", "${ServerInstance}", {"label": "CPU %"}]
+                ],
+                "yAxis": {"left": {"min": 0, "max": 100}}}}
+            ]
+          }
+        - NS: !Ref MetricsNamespace
+          SVC: dubstudio-server
+          Q: !GetAtt RescoreQueue.QueueName
+          DLQ: !GetAtt RescoreDLQ.QueueName
 
 Outputs:
   PublicIP:
@@ -504,5 +651,11 @@ Outputs:
     Value: !Ref ServerInstance
   LogGroup:
     Value: !Ref ServerLogGroup
+  RescoreQueueUrl:
+    Value: !Ref RescoreQueue
+  RescoreDLQUrl:
+    Value: !Ref RescoreDLQ
+  DashboardURL:
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards/dashboard/dubstudio
   Region:
     Value: !Ref AWS::Region

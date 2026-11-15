@@ -31,6 +31,7 @@ type Config struct {
 	PublicBaseURL       string
 	Store               string // "dynamo" or "memory"
 	ClipsFile           string
+	RescoreQueueURL     string // SQS queue for async re-scoring of fallback takes; empty = off
 
 	GeminiTimeout  time.Duration // per attempt
 	MaxUploadBytes int64
@@ -54,6 +55,7 @@ func Load() Config {
 		PublicBaseURL:       strings.TrimRight(getenv("PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
 		Store:               strings.ToLower(getenv("STORE", "dynamo")),
 		ClipsFile:           getenv("CLIPS_FILE", "../clips/clips.json"),
+		RescoreQueueURL:     strings.TrimSpace(os.Getenv("RESCORE_QUEUE_URL")),
 		GeminiTimeout:       15 * time.Second,
 		MaxUploadBytes:      5 << 20,
 	}

@@ -68,3 +68,14 @@ func TestTakeMarshalHasGSIKeys(t *testing.T) {
 		t.Errorf("clip_id must be S")
 	}
 }
+
+func TestTakeTTLMarshalsAsNumber(t *testing.T) {
+	item, err := attributevalue.MarshalMap(model.Take{TakeID: "x", ExpiresAt: 1800000000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, ok := item["expires_at"].(*types.AttributeValueMemberN)
+	if !ok || n.Value != "1800000000" {
+		t.Fatalf("expires_at must be a DynamoDB Number for TTL, got %#v", item["expires_at"])
+	}
+}

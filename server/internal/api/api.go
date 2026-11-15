@@ -21,6 +21,7 @@ import (
 	"github.com/dubstudio/server/internal/media"
 	"github.com/dubstudio/server/internal/metrics"
 	"github.com/dubstudio/server/internal/model"
+	"github.com/dubstudio/server/internal/rescore"
 	"github.com/dubstudio/server/internal/store"
 	"github.com/dubstudio/server/internal/timing"
 )
@@ -32,6 +33,7 @@ type Server struct {
 	Judge          *gemini.Judge
 	Media          *media.Media // nil = S3 disabled
 	Metrics        *metrics.Emitter
+	Rescore        *rescore.Queue // nil = async re-scoring off
 	PublicBaseURL  string
 	MaxUploadBytes int64
 	ModelName      string
@@ -153,10 +155,13 @@ func (s *Server) createTake(w http.ResponseWriter, r *http.Request) {
 		"vad_raw_count", len(meta.VADSegments), "vad_raw", meta.VADSegments,
 		"vad_clean", vad, "speech_windows", clip.SpeechWindows,
 		"timing", timingScore, "debug_audio_key", media.DebugAudioKey(takeID))
+	audioSaved := false
 	if s.Media.Enabled() {
 		dctx, dcancel := context.WithTimeout(context.WithoutCancel(r.Context()), 5*time.Second)
 		if err := s.Media.PutDebugAudio(dctx, takeID, audio, mime); err != nil {
 			slog.Warn("debug audio upload failed", "take_id", takeID, "err", err)
+		} else {
+			audioSaved = true
 		}
 		dcancel()
 	}
@@ -189,6 +194,7 @@ func (s *Server) createTake(w http.ResponseWriter, r *http.Request) {
 		Overall: overall, Roast: res.Roast, EmotionReason: res.EmotionReason, ComedyReason: res.ComedyReason,
 		ScoredBy: res.ScoredBy, LatencyMS: latency, VADSegments: vad,
 		UploadStatus: model.UploadPending, CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		ExpiresAt: time.Now().Add(model.TakeRetention).Unix(),
 	}
 	if s.Media.Enabled() {
 		take.DubKey = media.DubKey(takeID)
@@ -209,6 +215,18 @@ func (s *Server) createTake(w http.ResponseWriter, r *http.Request) {
 				slog.Warn("upsert player failed", "err", err)
 			}
 		}(meta.PlayerID, nick)
+	}
+
+	// Gemini failed: queue the take so the SQS worker re-scores it from the S3
+	// audio once Gemini recovers (leaderboard + share page update then).
+	if res.ScoredBy == gemini.ScoredByFallback && audioSaved && s.Rescore.Enabled() {
+		qctx, qcancel := context.WithTimeout(context.WithoutCancel(r.Context()), 3*time.Second)
+		if err := s.Rescore.Enqueue(qctx, takeID, mime); err != nil {
+			slog.Warn("rescore enqueue failed", "take_id", takeID, "err", err)
+		} else {
+			slog.Info("rescore enqueued", "take_id", takeID)
+		}
+		qcancel()
 	}
 
 	s.Metrics.Scoring(metrics.ScoringEvent{

@@ -50,6 +50,20 @@ func (m *Memory) SetUploadStatus(_ context.Context, id, status string) error {
 	return nil
 }
 
+func (m *Memory) UpdateScores(_ context.Context, id string, r Rescore) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.takes[id]
+	if !ok || t.ScoredBy != scoredByFallback {
+		return ErrNotFound
+	}
+	t.Emotion, t.Comedy, t.Overall = r.Emotion, r.Comedy, r.Overall
+	t.Roast, t.EmotionReason, t.ComedyReason = r.Roast, r.EmotionReason, r.ComedyReason
+	t.ScoredBy, t.RescoredAt = r.ScoredBy, r.RescoredAt
+	m.takes[id] = t
+	return nil
+}
+
 func (m *Memory) DeleteTake(_ context.Context, id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

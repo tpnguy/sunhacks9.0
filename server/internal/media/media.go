@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -108,6 +109,27 @@ func (m *Media) Delete(ctx context.Context, takeID string) error {
 // It lives under dubs/ so the 7-day lifecycle rule and the instance role's
 // least-privilege policy already cover it.
 func DebugAudioKey(takeID string) string { return "dubs/" + takeID + ".take.m4a" }
+
+// GetDebugAudio reads a take's raw audio back (used by the SQS re-score worker).
+// Returns ErrNoAudio when the object is gone (deleted or expired).
+func (m *Media) GetDebugAudio(ctx context.Context, takeID string) ([]byte, error) {
+	if m == nil {
+		return nil, ErrNoAudio
+	}
+	out, err := m.client.GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(m.bucket), Key: aws.String(DebugAudioKey(takeID))})
+	if err != nil {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) && (apiErr.ErrorCode() == "NoSuchKey" || apiErr.ErrorCode() == "NotFound") {
+			return nil, ErrNoAudio
+		}
+		return nil, err
+	}
+	defer out.Body.Close()
+	return io.ReadAll(io.LimitReader(out.Body, 16<<20))
+}
+
+// ErrNoAudio means the take's audio object does not exist.
+var ErrNoAudio = errors.New("take audio not found")
 
 // PutDebugAudio stores the raw take audio (no-op when S3 is disabled).
 func (m *Media) PutDebugAudio(ctx context.Context, takeID string, audio []byte, mime string) error {

@@ -69,6 +69,7 @@ put_param PLAYERS_TABLE "$(out PlayersTable)"
 put_param STORE dynamo
 put_param PORT 8080
 put_param CLIPS_FILE /opt/dubstudio/clips.json
+put_param RESCORE_QUEUE_URL "$(out RescoreQueueUrl)"
 MODEL=$(env_from_dotenv GEMINI_MODEL)
 [ -n "$MODEL" ] && put_param GEMINI_MODEL "$MODEL"
 FALLBACK=$(env_from_dotenv GEMINI_FALLBACK_MODEL)

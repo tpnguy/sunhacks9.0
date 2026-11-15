@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -78,6 +79,30 @@ func (d *Dynamo) SetUploadStatus(ctx context.Context, id, status string) error {
 		UpdateExpression:          aws.String("SET upload_status = :s"),
 		ConditionExpression:       aws.String("attribute_exists(take_id)"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{":s": &types.AttributeValueMemberS{Value: status}},
+	})
+	var ccf *types.ConditionalCheckFailedException
+	if errors.As(err, &ccf) {
+		return ErrNotFound
+	}
+	return err
+}
+
+// UpdateScores is a single conditional UpdateItem: the GSIs re-sort the take on
+// the leaderboard automatically because `overall` is their sort key.
+func (d *Dynamo) UpdateScores(ctx context.Context, id string, r Rescore) error {
+	n := func(v int) types.AttributeValue { return &types.AttributeValueMemberN{Value: strconv.Itoa(v)} }
+	s := func(v string) types.AttributeValue { return &types.AttributeValueMemberS{Value: v} }
+	_, err := d.db.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: aws.String(d.takesTable),
+		Key:       map[string]types.AttributeValue{"take_id": s(id)},
+		UpdateExpression: aws.String("SET emotion = :e, comedy = :c, overall = :o, roast = :r, " +
+			"emotion_reason = :er, comedy_reason = :cr, scored_by = :sb, rescored_at = :at"),
+		ConditionExpression: aws.String("attribute_exists(take_id) AND scored_by = :fb"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":e": n(r.Emotion), ":c": n(r.Comedy), ":o": n(r.Overall), ":r": s(r.Roast),
+			":er": s(r.EmotionReason), ":cr": s(r.ComedyReason), ":sb": s(r.ScoredBy),
+			":at": s(r.RescoredAt), ":fb": s(scoredByFallback),
+		},
 	})
 	var ccf *types.ConditionalCheckFailedException
 	if errors.As(err, &ccf) {

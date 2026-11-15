@@ -80,6 +80,38 @@ func (e *Emitter) Scoring(ev ScoringEvent) {
 	e.write(rec)
 }
 
+// Rescore emits rescore_success / rescore_retry / rescore_dropped (Count) and,
+// on success, rescore_delay_ms: how long the take waited in SQS before Gemini
+// recovered. One record per SQS job.
+func (e *Emitter) Rescore(takeID, outcome string, attempt int, ageMS int64) {
+	metricsList := []metricDef{
+		{Name: "rescore_success", Unit: "Count"},
+		{Name: "rescore_retry", Unit: "Count"},
+		{Name: "rescore_dropped", Unit: "Count"},
+	}
+	rec := map[string]any{
+		"Service":         ServiceName,
+		"rescore_success": b2i(outcome == "rescored"),
+		"rescore_retry":   b2i(outcome == "retry"),
+		"rescore_dropped": b2i(outcome == "dropped"),
+		"take_id":         takeID,
+		"outcome":         outcome,
+		"attempt":         attempt,
+		"event":           "take_rescored",
+	}
+	if outcome == "rescored" {
+		metricsList = append(metricsList, metricDef{Name: "rescore_delay_ms", Unit: "Milliseconds"})
+		rec["rescore_delay_ms"] = ageMS
+	}
+	rec["_aws"] = map[string]any{
+		"Timestamp": time.Now().UnixMilli(),
+		"CloudWatchMetrics": []directive{{
+			Namespace: Namespace, Dimensions: [][]string{{"Service"}}, Metrics: metricsList,
+		}},
+	}
+	e.write(rec)
+}
+
 func (e *Emitter) write(rec map[string]any) {
 	b, err := json.Marshal(rec)
 	if err != nil {

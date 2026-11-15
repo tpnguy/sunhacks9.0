@@ -26,7 +26,22 @@ type Store interface {
 	UpsertPlayer(ctx context.Context, playerID, nickname string) error
 	// ListClips reads the clips table (catalog source).
 	ListClips(ctx context.Context) ([]model.Clip, error)
+	// UpdateScores replaces a fallback take's Gemini scores. It only applies
+	// while the take exists and is still scored_by "fallback"; otherwise it
+	// returns ErrNotFound (deleted, or already re-scored by a duplicate message).
+	UpdateScores(ctx context.Context, takeID string, r Rescore) error
 }
+
+// Rescore is the Gemini half of a scorecard, written by the async re-score worker.
+type Rescore struct {
+	Emotion, Comedy, Overall           int
+	Roast, EmotionReason, ComedyReason string
+	ScoredBy                           string
+	RescoredAt                         string // RFC3339 UTC
+}
+
+// scoredByFallback mirrors gemini.ScoredByFallback (store must not import gemini).
+const scoredByFallback = "fallback"
 
 // ClampLimit normalises a leaderboard limit to 1..100 (default 10).
 func ClampLimit(n int) int {

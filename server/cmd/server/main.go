@@ -14,6 +14,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
 	server "github.com/dubstudio/server"
 	"github.com/dubstudio/server/internal/api"
@@ -22,6 +23,7 @@ import (
 	"github.com/dubstudio/server/internal/gemini"
 	"github.com/dubstudio/server/internal/media"
 	"github.com/dubstudio/server/internal/metrics"
+	"github.com/dubstudio/server/internal/rescore"
 	"github.com/dubstudio/server/internal/store"
 )
 
@@ -33,11 +35,12 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	needAWS := cfg.Store != "memory" || cfg.MediaBucket != ""
+	needAWS := cfg.Store != "memory" || cfg.MediaBucket != "" || cfg.RescoreQueueURL != ""
 	var (
-		st  store.Store
-		src catalog.Source
-		med *media.Media
+		st     store.Store
+		src    catalog.Source
+		med    *media.Media
+		sqsAPI *sqs.Client
 	)
 	if needAWS {
 		awsCfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(cfg.AWSRegion))
@@ -51,6 +54,9 @@ func main() {
 		}
 		if cfg.MediaBucket != "" {
 			med = media.New(s3.NewFromConfig(awsCfg), cfg.MediaBucket)
+		}
+		if cfg.RescoreQueueURL != "" {
+			sqsAPI = sqs.NewFromConfig(awsCfg)
 		}
 	}
 	if st == nil {
@@ -84,9 +90,24 @@ func main() {
 		backend = c
 	}
 
+	judge := gemini.NewJudge(backend, cfg.GeminiTimeout)
+
+	// Async re-scoring needs the queue and the raw take audio in S3.
+	var rq *rescore.Queue
+	if sqsAPI != nil && med.Enabled() {
+		rq = rescore.NewQueue(sqsAPI, cfg.RescoreQueueURL)
+		w := &rescore.Worker{
+			Client: sqsAPI, URL: cfg.RescoreQueueURL, Store: st, Clips: cat, Audio: med, Judge: judge,
+			OnEvent: metrics.Default.Rescore,
+		}
+		go w.Run(ctx)
+	} else if cfg.RescoreQueueURL != "" {
+		slog.Warn("RESCORE_QUEUE_URL set but MEDIA_BUCKET is empty: async re-scoring off")
+	}
+
 	srv := &api.Server{
-		Clips: cat, Store: st, Media: med, Metrics: metrics.Default,
-		Judge:          gemini.NewJudge(backend, cfg.GeminiTimeout),
+		Clips: cat, Store: st, Media: med, Metrics: metrics.Default, Rescore: rq,
+		Judge:          judge,
 		PublicBaseURL:  cfg.PublicBaseURL,
 		MaxUploadBytes: cfg.MaxUploadBytes,
 		ModelName:      cfg.GeminiModel,
@@ -102,7 +123,7 @@ func main() {
 
 	slog.Info("dubstudio server starting",
 		"port", cfg.Port, "store", map[bool]string{true: "memory", false: "dynamo"}[cfg.Store == "memory"],
-		"gemini", backend.Name(), "model", cfg.GeminiModel, "fallback_model", cfg.GeminiFallbackModel, "s3", med.Enabled(),
+		"gemini", backend.Name(), "model", cfg.GeminiModel, "fallback_model", cfg.GeminiFallbackModel, "s3", med.Enabled(), "rescore_queue", rq.Enabled(),
 		"clips", len(cat.All()), "clips_source", cat.Origin(), "public_base_url", cfg.PublicBaseURL)
 
 	go func() {

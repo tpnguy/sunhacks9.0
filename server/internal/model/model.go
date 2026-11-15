@@ -1,6 +1,8 @@
 // Package model holds the shared data types from API.md.
 package model
 
+import "time"
+
 // Window is a time span in seconds from clip start (speech window or VAD segment).
 type Window struct {
 	Start float64 `json:"start" dynamodbav:"start"`
@@ -55,7 +57,15 @@ type Take struct {
 	DubKey        string   `json:"dub_key,omitempty" dynamodbav:"dub_key,omitempty"`
 	UploadStatus  string   `json:"upload_status" dynamodbav:"upload_status"`
 	CreatedAt     string   `json:"created_at" dynamodbav:"created_at"` // RFC3339 UTC
+	// RescoredAt is set when the async SQS worker replaced a fallback scorecard.
+	RescoredAt string `json:"rescored_at,omitempty" dynamodbav:"rescored_at,omitempty"`
+	// ExpiresAt (epoch seconds) is the DynamoDB TTL attribute: the row is deleted
+	// automatically after TakeRetention, matching the S3 lifecycle on dubs/.
+	ExpiresAt int64 `json:"-" dynamodbav:"expires_at,omitempty"`
 }
+
+// TakeRetention is the privacy promise shown on the consent screen.
+const TakeRetention = 7 * 24 * time.Hour
 
 // LeaderboardEntry is one row of GET /leaderboard.
 type LeaderboardEntry struct {

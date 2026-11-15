@@ -34,7 +34,7 @@ struct CreditsView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    Text("DubStudio, built at SunHacks 2026.")
+                    Text("LARPStudio, built at SunHacks 2026.")
                         .font(Theme.body(14)).foregroundStyle(Theme.textSecondary)
                 }
                 .padding(32)

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>DubStudio</string>
+	<string>LARPStudio</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,7 +26,7 @@
 		<true/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>DubStudio records your voice while you dub a clip. Your recording is sent to Google Gemini for scoring and deleted after 7 days.</string>
+	<string>LARPStudio records your voice while you dub a clip. Your recording is sent to Google Gemini for scoring and deleted after 7 days.</string>
 	<key>ServerBaseURL</key>
 	<string>$(SERVER_BASE_URL)</string>
 	<key>UIApplicationSceneManifest</key>

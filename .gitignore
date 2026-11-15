@@ -1,22 +1,61 @@
+# ---------- Secrets (never commit) ----------
 .env
 *.env
+.env.*
 !.env.example
 *.pem
 *.key
+*.p8
+*.p12
+*.cer
+*.mobileprovision
 *secret*
 *key*.txt
-.DS_Store
-*.xcuserstate
-xcuserdata/
-DerivedData/
-build/
-*.xcodeproj/project.xcworkspace/xcuserdata/
-clips/raw/
-clips/work/
 infra/outputs.json
-server/dubstudio-server
-server/bin/
 
-# Local planning docs (not published)
+# ---------- Player data ----------
+# Raw take audio / recordings from testing (bundled clips are .mp4 and stay tracked)
+*.m4a
+*.wav
+*.caf
+*.aiff
+
+# ---------- Local planning docs (not published) ----------
 API.md
 PLAN.md
+
+# ---------- Go ----------
+server/dubstudio-server
+server/bin/
+*.test
+*.out
+coverage.*
+
+# ---------- Python (clips/ prep, infra/logfmt.py) ----------
+__pycache__/
+*.pyc
+.venv/
+clips/raw/
+clips/work/
+
+# ---------- Xcode / iOS ----------
+*.xcuserstate
+xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+build/
+*.xcresult
+*.ipa
+*.dSYM/
+*.dSYM.zip
+.swiftpm/
+
+# ---------- Editors, AI tools, OS ----------
+.vscode/
+.idea/
+.cursor/
+.claude/settings.local.json
+.DS_Store
+._*
+*.swp
+*.log

@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  DubStudio (SunHacks 2026) - EC2 (Go API behind Caddy/HTTPS on <eip>.sslip.io),
+  LARPStudio (SunHacks 2026) - EC2 (Go API behind Caddy/HTTPS on <eip>.sslip.io),
   DynamoDB (takes/clips/players + leaderboard GSIs), S3 media bucket with 7-day
   dub expiry, least-privilege instance role, CloudWatch logs/EMF metrics, budget.
 
@@ -565,7 +565,7 @@ Resources:
             "start": "-PT12H",
             "widgets": [
               {"type": "text", "x": 0, "y": 0, "width": 24, "height": 2, "properties": {"markdown":
-                "## DubStudio - scoring pipeline\nCode scores timing, Gemini scores taste. Fallback takes are re-scored asynchronously via SQS (`dubstudio-rescore`, DLQ after 20 tries)."}},
+                "## LARPStudio - scoring pipeline\nCode scores timing, Gemini scores taste. Fallback takes are re-scored asynchronously via SQS (`dubstudio-rescore`, DLQ after 20 tries)."}},
 
               {"type": "metric", "x": 0, "y": 2, "width": 12, "height": 6, "properties": {
                 "title": "End-of-take -> scorecard latency (ms)", "region": "${AWS::Region}", "view": "timeSeries", "period": 300,

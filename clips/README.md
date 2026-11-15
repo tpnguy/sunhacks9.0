@@ -1,4 +1,4 @@
-# clips/: DubStudio seed clips
+# clips/: LARPStudio seed clips
 
 There are four dialogue clips of about 14 s each, with visible talking faces, 2 to 7 short lines each, and clear emotional beats. `clips.json` follows the shape in `../API.md`. The mp4s and `clips.json` are also copied into `../ios/DubStudio/Clips/`, where they ship in the app bundle.
 

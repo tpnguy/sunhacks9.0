@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DubStudio clip prep: download -> trim -> VAD -> clips.json.
+"""LARPStudio clip prep: download -> trim -> VAD -> clips.json.
 
 Usage (from dubstudio/clips/):
     python3 -m venv .venv && .venv/bin/pip install silero-vad numpy soundfile

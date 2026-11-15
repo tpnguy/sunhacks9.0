@@ -12,7 +12,7 @@ final class DebugLog: ObservableObject, @unchecked Sendable {
     func log(_ message: String) {
         let line = "\(fmt.string(from: Date()))  \(message)"
         logger.info("\(line, privacy: .public)")
-        print("[DubStudio] \(line)")
+        print("[LARPStudio] \(line)")
         DispatchQueue.main.async {
             self.lines.append(line)
             if self.lines.count > 300 { self.lines.removeFirst(self.lines.count - 300) }

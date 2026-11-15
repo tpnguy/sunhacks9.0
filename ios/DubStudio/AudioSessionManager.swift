@@ -22,7 +22,7 @@ final class AudioSessionManager: ObservableObject {
     }
 
     /// Everywhere except the record screen: plain playback, so AirPods behave exactly as in any
-    /// video app. (Holding .playAndRecord for the whole app made iOS treat DubStudio like a call
+    /// video app. (Holding .playAndRecord for the whole app made iOS treat LARPStudio like a call
     /// and the AirPods dropped out of the output picker.)
     func configureForPlayback() {
         let s = AVAudioSession.sharedInstance()

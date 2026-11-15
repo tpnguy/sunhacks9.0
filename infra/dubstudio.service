@@ -1,6 +1,6 @@
 # Installed to /etc/systemd/system/dubstudio.service by push.sh (remote/install.sh).
 [Unit]
-Description=DubStudio Go API (:8080, behind Caddy)
+Description=LARPStudio Go API (:8080, behind Caddy)
 After=network-online.target
 Wants=network-online.target
 # never give up restarting during the demo

@@ -1,4 +1,4 @@
-// Package gemini is the "AI scores taste" half of DubStudio: a temperature-0
+// Package gemini is the "AI scores taste" half of LARPStudio: a temperature-0
 // scoring call (emotion, comedy) and a higher-temperature roast call, run in
 // parallel with per-attempt timeouts, one retry, and a designed fallback.
 package gemini

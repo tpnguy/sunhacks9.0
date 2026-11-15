@@ -50,7 +50,7 @@ struct DebugSettingsView: View {
                     Button("Copy log") { UIPasteboard.general.string = log.text }
                     Button("Clear log", role: .destructive) { log.clear() }
                 } header: { Text("Take log") } footer: {
-                    Text("Also printed to the Xcode console (search \"[DubStudio]\"). Server side: infra/logs.sh")
+                    Text("Also printed to the Xcode console (search \"[LARPStudio]\"). Server side: infra/logs.sh")
                 }
                 Section("Player") {
                     LabeledContent("Nickname", value: app.nickname)

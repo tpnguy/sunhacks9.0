@@ -9,7 +9,7 @@ enum RecorderError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noMicrophone: return "No microphone is available on this device."
-        case .permissionDenied: return "DubStudio needs microphone access. Enable it in Settings > DubStudio."
+        case .permissionDenied: return "LARPStudio needs microphone access. Enable it in Settings > LARPStudio."
         case .notPrepared: return "The recorder wasn't ready."
         }
     }

@@ -116,7 +116,7 @@ func (s *Server) deleteTake(w http.ResponseWriter, r *http.Request) {
 	slog.Info("take deleted by owner", "take_id", id)
 	render(w, http.StatusOK, "message.html", messagePageData{
 		Title: "Deleted", Heading: "Your take is gone",
-		Body: "The video, the recording and your score have been deleted. Thanks for playing DubStudio.",
+		Body: "The video, the recording and your score have been deleted. Thanks for playing LARPStudio.",
 	})
 }
 

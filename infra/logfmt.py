@@ -1,4 +1,4 @@
-"""Pretty-prints DubStudio server logs piped from `aws logs tail` (used by logs.sh)."""
+"""Pretty-prints LARPStudio server logs piped from `aws logs tail` (used by logs.sh)."""
 import json
 import sys
 

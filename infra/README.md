@@ -1,4 +1,4 @@
-# DubStudio infra (AWS, us-west-2)
+# LARPStudio infra (AWS, us-west-2)
 
 One CloudFormation stack (`dubstudio`, `template.yaml`) plus four scripts. No SSH and no access keys on the server.
 

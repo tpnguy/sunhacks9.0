@@ -158,7 +158,7 @@ struct ChipButtonStyle: ButtonStyle {
 
 // MARK: - Common pieces
 
-/// The DubStudio marquee logo.
+/// The LARPStudio marquee logo.
 struct LogoView: View {
     var size: CGFloat = 64
     var body: some View {
@@ -166,12 +166,12 @@ struct LogoView: View {
             Image(systemName: "mic.fill")
                 .font(.system(size: size * 0.7, weight: .black))
                 .foregroundStyle(Theme.goldGradient)
-            Text("DubStudio")
+            Text("LARPStudio")
                 .font(Theme.display(size))
                 .foregroundStyle(Theme.goldGradient)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("DubStudio")
+        .accessibilityLabel("LARPStudio")
     }
 }
 

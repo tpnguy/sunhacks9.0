@@ -1,4 +1,4 @@
-// Command server runs the DubStudio API.
+// Command server runs the LARPStudio API.
 package main
 
 import (
